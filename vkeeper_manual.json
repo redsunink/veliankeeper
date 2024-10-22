@@ -1,0 +1,62 @@
+[
+    {
+        "command": "Preface",
+        "description": "Correct use of commands and parameters is critical for bot to function properly. You will use /add_item and /add_facility less after you fill in the data, but pay attention when creating tasks and stockpiles. For the end, is our Glory!"
+    },
+    {
+        "command": "/add_item",
+        "description": "Adds item to database. It can be a resource, a vehicle, an item, everything that can be produced and used in task manager. For correct behavior open foxhole.wiki.gg and copy item name EXACTLY as it is on the corresponding page header, and insert correct values for crates and pallets, and to ensure correct image grabbing."
+    },
+    {
+        "command": "/add_facility",
+        "description": "Almost same as for items, but facilities. Only used in task manager to point new players where they can complete their task."
+    },
+    {
+        "command": "/add_stockpile",
+        "description": "Stockpiles to keep it organized and use with task manager. Takes a name (it's better to follow some convention for simplicity), custom description, location and passcode. make sure passcode is 6 numbers as I don't check for it yet."
+    },
+	{
+        "command": "/create_task",
+        "description": "Alpha and Omega of this bot. Pick up item from item database, select amount to be produced, select stockpile to be deposited. You got business running. Picks up items and facilities from their alias to speed up the process."
+    },
+	{
+        "command": "/create_custom_task",
+        "description": "Specify a custom (non-production) task."
+    },
+    {
+        "command": "/get_stockpile",
+        "description": "Get stockpile information in fancy and easy-to-read format. Passcode will be under spoiler. You can use it to add whistles to your #stockpiles channel if you have one."
+    },
+    {
+        "command": "/get_item",
+        "description": "Debug function. Retrieves an item from the database based on a search query. You can input a name as well as aliases you put with /add_item. Use this function to check entries if they seem incorrect."
+    },
+    {
+        "command": "/get_facility",
+        "description": "Debug function. Same as get_item, but for facilities."
+    },
+	{
+        "command": "/edit_item",
+        "description": "/add_item command may work incorrectly sometimes. If you added item, but /get_items gives no response or fails, use /edit_item to check with all necessary fields and edit them as needed."
+    },
+	{
+        "command": "/purge_all_tasks",
+        "description": "Use with caution. Removes ALL tasks from database after confirmation."
+    },
+	{
+        "command": "/purge_all_stockpiles",
+        "description": "Use with caution. Removes ALL stockpiles from database after confirmation."
+    },
+	{
+        "command": "/vouch",
+        "description": "Use in connection with config file. Lets you easily verify new users with single command, assigning designated set of roles. Verification-specific roles can be managed through config file."
+    },
+    {
+        "command": "/sync",
+        "description": "Synchronizes commands. \"/sync\" used for global sync, while \"/sync * \" (with asterisk) is for guild sync (much faster, almost instantaneous for the given server). You will rarely need this anyway."
+    },
+    {
+        "command": "END",
+        "description": "You have reached the end of the manual."
+    }
+]
