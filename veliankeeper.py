@@ -11,6 +11,7 @@ import json
 import logging
 import traceback
 import random
+import asyncio
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -821,6 +822,37 @@ async def edit_item(interaction: discord.Interaction, item_name: str):
         return
     
     await interaction.response.send_modal(EditItemModalPrimary(item))
+
+@bot.tree.command()
+@has_critical_command_use_role()
+async def delete_item(interaction: discord.Interaction, item_name: str):
+    """Delete an item from the database."""
+    
+    # Check if the item exists using the database manager
+    item_exists = db_manager.get_item_by_name(item_name)
+
+    if item_exists is None:
+        await interaction.response.send_message(f"No item found with the name: {item_name}.", ephemeral=True)
+        return
+
+    # Confirmation message
+    await interaction.response.send_message(f"Are you sure you want to delete the item '{item_name}'? Type 'yes' to confirm.", ephemeral=True)
+
+    # Wait for the user's confirmation
+    def check(m):
+        return m.author == interaction.user and m.content.lower() == "yes"
+
+    try:
+        # Wait for user confirmation
+        msg = await bot.wait_for('message', check=check, timeout=30.0)
+
+        # Delete the item using the database manager
+        db_manager.delete_item_by_name(item_name)
+        
+        await interaction.followup.send(f"Item '{item_name}' has been successfully deleted.", ephemeral=True)
+
+    except asyncio.TimeoutError:
+        await interaction.followup.send("Timeout: Item deletion canceled.", ephemeral=True)
 
 @bot.event
 async def on_error(event, *args, **kwargs):

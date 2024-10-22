@@ -629,3 +629,25 @@ def update_item(item):
         return False
     finally:
         conn.close()
+
+def get_item_by_name(item_name):
+    """Check if the item exists in the database."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM items WHERE item_name = ?", (item_name,))
+    item = cursor.fetchone()
+
+    conn.close()
+
+    return item
+
+def delete_item_by_name(item_name):
+    """Delete an item from the database by its name."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM items WHERE item_name = ?", (item_name,))
+    conn.commit()
+
+    conn.close()
