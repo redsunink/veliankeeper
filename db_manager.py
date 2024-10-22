@@ -617,10 +617,10 @@ def update_item(item):
         cursor.execute("""
             UPDATE items
             SET item_name = ?, item_aliases = ?, can_be_crated = ?, can_be_palleted = ?, 
-                crate_size = ?, pallet_size = ?, image_url = ?
+                crate_size = ?, pallet_size = ?, facilities = ?, image_url = ?
             WHERE id = ?
         """, (item['item_name'], item['item_aliases'], item['can_be_crated'], item['can_be_palleted'],
-              item['crate_size'], item['pallet_size'], item['image_url'], item['id']))
+              item['crate_size'], item['pallet_size'], item['facilities'], item['image_url'], item['id']))
         conn.commit()
         return True
     except Exception as e:

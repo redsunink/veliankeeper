@@ -798,10 +798,12 @@ class EditItemModalSecondary(discord.ui.Modal, title='Edit Secondary Fields'):
         self.item = item
         self.add_item(discord.ui.TextInput(label='Crate Size', default=str(item['crate_size'])))
         self.add_item(discord.ui.TextInput(label='Pallet Size', default=str(item['pallet_size'])))
+        self.add_item(discord.ui.TextInput(label='Facilities', default=str(item['facilities'])))
 
     async def on_submit(self, interaction: discord.Interaction):
         self.item['crate_size'] = self.children[0].value
         self.item['pallet_size'] = self.children[1].value
+        self.item['facilities'] = self.children[2].value
 
         success = db_manager.update_item(self.item)
         if success:
