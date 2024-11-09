@@ -40,6 +40,10 @@
         "description": "/add_item command may work incorrectly sometimes. If you added item, but /get_items gives no response or fails, use /edit_item to check with all necessary fields and edit them as needed."
     },
 	{
+        "command": "/delete_stockpile",
+        "description": "Use it for expired, released or reset stockpiles. i need to implement editing of stockpile though..."
+    },
+	{
         "command": "/purge_all_tasks",
         "description": "Use with caution. Removes ALL tasks from database after confirmation."
     },

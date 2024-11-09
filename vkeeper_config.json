@@ -1,7 +1,11 @@
 {
-    "verification_roles": ["Fleet Admiral", "Admiral", "Captain", "Lieutenant"],
-    "command_use_roles" : ["Fleet Admiral", "Admiral", "Captain", "Lieutenant", "Petty Officer", "Logistics"],
-    "critical_command_roles" : ["Fleet Admiral", "Admiral"],
+	"verification_roles": ["Fleet Admiral", "Admiral", "Captain", "Lieutenant"],
+	"command_use_roles" : ["Fleet Admiral", "Admiral", "Captain", "Lieutenant", "Petty Officer", "Logistics"],
+	"critical_command_roles" : ["Fleet Admiral", "Admiral"],
 	"completed_tasks_channel_id": 1296400491172990997,
-	"bot_token" : "MTI5NDA5MTkyNDE5MzQxNTE4OQ.GPcyDf.zkERNyz0cq8Miks1_X_ELrUZXH91GrsC5SbpcY"
+	"how_to_verify_channel_id": 1293716349578645574,
+	"verification_channel_id": 1293716381358882897,
+	"welcome_channel_id": 1293717909520252938,
+	"general_channel_id": 1293717909520252938,
+	"bot_token" : "token_here"
 }

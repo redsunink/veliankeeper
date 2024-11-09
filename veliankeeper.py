@@ -1,18 +1,20 @@
-from typing import Literal, Optional
 import discord
 from discord.ext.commands import Greedy, Context
 from discord.ext import commands
 from discord.ui import View, Select
 from discord import app_commands
 from discord import Embed
+from typing import Literal, Optional
+
 import scraphauler #Import scraper
 import db_manager #Import database management
-import json
-import logging
-import traceback
-import random
-import asyncio
+import json #Import json managing
+import logging #Import logging
+import traceback #Import traceback  
+import random #Import random - for random quotes
+import asyncio #Import asyncio - for async tasks    
 
+#Enable logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -35,17 +37,19 @@ with open('vkeeper_config.json', 'r') as config_file:
 with open('vkeeper_quotes.json', 'r') as f:
     quotes = json.load(f)
 
+#This section sorts out the roles and tokens from the config file - these are used to check if a user has the correct roles to use certain commands
 verification_roles = config['verification_roles']
 command_use_roles = config['command_use_roles']
 critical_command_roles = config['critical_command_roles']
 bot_token = config['bot_token']
 
-#Help section dictionary
+#This section loads the help manual from the json file
 def load_help_manual():
     with open('vkeeper_manual.json', 'r') as f:
         return json.load(f)
 help_manual_data = load_help_manual()
 
+#---Verification role check - for /vouch---
 # Define a check for users with multiple possible verification roles
 def has_verification_role():
     async def predicate(interaction: discord.Interaction):
@@ -60,7 +64,7 @@ def has_verification_role():
             return False
     return app_commands.check(predicate)
 
-#Define a check with user roles who can execute commands
+#---Command use check - for everything else---
 def has_command_use_role():
     async def predicate(interaction: discord.Interaction):
         allowed_roles = command_use_roles  
@@ -74,7 +78,7 @@ def has_command_use_role():
             return False
     return app_commands.check(predicate)
 
-#Define a check with user roles who can execute critical commands
+#---Critical command check - for critical commands---
 def has_critical_command_use_role():
     async def predicate(interaction: discord.Interaction):
         allowed_roles = critical_command_roles  
@@ -88,6 +92,7 @@ def has_critical_command_use_role():
             return False
     return app_commands.check(predicate)    
 
+#This section creates the embed for the task
 def task_embed(task):
     embed = discord.Embed(
         title=f"Task: {task['amount']} x {task['item_name']} to {task['stockpile_name']}",
@@ -106,7 +111,7 @@ def task_embed(task):
     embed.set_footer(text=f"Task ID: {task['id']} | {random_quote}")
     return embed
 
-
+#This section creates the embed for the custom task
 def custom_task_embed(task):
     embed = discord.Embed(
         title=f"Task: {task['task_header']}",
@@ -121,7 +126,15 @@ def custom_task_embed(task):
     embed.set_footer(text=f"Custom Task ID: {task['id']}")
     return embed
 
+#This section creates the dropdown view for the vouch command
+@bot.tree.command(name="vouch", description="Verify a new user and assign roles.")
+@has_verification_role()
+@app_commands.describe(member="The member to verify")
+async def vouch(interaction: discord.Interaction, member: discord.Member):
+    # Create the dropdown view and send it to the officer
+    await interaction.response.send_message("Select the role for the user:", view=RoleSelectView(member), ephemeral=True)
 
+#This section creates the pagination view for the help manual
 class PaginationView(discord.ui.View):
 
 	def __init__(self, data):
@@ -244,7 +257,6 @@ class TaskManagerView(discord.ui.View):
             pass
 
         await interaction.response.send_message("Task marked as closed, moved to the completed tasks channel, and removed from the original channel.", ephemeral=True)
-
 
 class CustomTaskManagerView(discord.ui.View):
     def __init__(self, task_id):
@@ -372,18 +384,34 @@ class RoleSelect(discord.ui.Select):
     
     async def callback(self, interaction: discord.Interaction):
         selected_role = self.values[0]
-        role = discord.utils.get(interaction.guild.roles, name=selected_role)
         guild = interaction.guild
-        if selected_role == "Ally":
-           role = discord.utils.get(guild.roles, name="Ally")
-        elif selected_role == "Seaman":
-           role = discord.utils.get(guild.roles, name="Seaman")
+        role = None
         verified_role = discord.utils.get(guild.roles, name="Legionnaire")
         
-        if role and verified_role:
-            await self.member.add_roles(verified_role, role)
-            await interaction.response.send_message(f"{self.member.mention} has been verified as a {selected_role}! Welcome to the Republic Coastal Legion! Please be sure to change your server nickname to match your in-game name. Check out <id:browse> for additional optional roles, and take a look at our <id:guide>. Welcome aboard :saluting_face:", ephemeral=False)
-        else:
+        if selected_role == "Ally":
+            role = discord.utils.get(guild.roles, name="Ally")
+            if role:
+                await self.member.add_roles(role)
+                await interaction.response.send_message(
+                    f"{self.member.mention} has been verified as an Ally! Welcome to the Republic Coastal Legion! "
+                    "Please be sure to change your server nickname to match your in-game name. "
+                    "Check out <id:browse> for additional optional roles, and take a look at our <id:guide>. "
+                    "Welcome aboard :saluting_face:", 
+                    ephemeral=False
+                )
+        elif selected_role == "Seaman":
+            role = discord.utils.get(guild.roles, name="Seaman")
+            if role and verified_role:
+                await self.member.add_roles(role, verified_role)
+                await interaction.response.send_message(
+                    f"{self.member.mention} has been verified as a Seaman! Welcome to the Republic Coastal Legion! "
+                    "Please be sure to change your server nickname to match your in-game name. "
+                    "Check out <id:browse> for additional optional roles, and take a look at our <id:guide>. "
+                    "Welcome aboard :saluting_face:", 
+                    ephemeral=False
+                )
+        
+        if not role:
             await interaction.response.send_message("Role not found. Please check role names.", ephemeral=True)
 
 class RoleSelectView(View):
@@ -391,13 +419,122 @@ class RoleSelectView(View):
         super().__init__()
         self.add_item(RoleSelect(member))
 
-# Define the slash command with the dropdown role selection
-@bot.tree.command(name="vouch", description="Verify a new user and assign roles.")
-@has_verification_role()
-@app_commands.describe(member="The member to verify")
-async def vouch(interaction: discord.Interaction, member: discord.Member):
-    # Create the dropdown view and send it to the officer
-    await interaction.response.send_message("Select the role for the user:", view=RoleSelectView(member), ephemeral=True)
+class EditStockpileModal(discord.ui.Modal, title='Edit Stockpile'):
+    def __init__(self, stockpile):
+        super().__init__()
+        self.stockpile = stockpile
+        self.add_item(discord.ui.TextInput(label='Stockpile Name', default=stockpile['stockpile_name']))
+        self.add_item(discord.ui.TextInput(label='Description', default=stockpile['stockpile_description']))
+        self.add_item(discord.ui.TextInput(label='Location', default=str(stockpile['stockpile_location'])))
+        self.add_item(discord.ui.TextInput(label='Passcode', default=stockpile['stockpile_passcode']))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.stockpile['stockpile_name'] = self.children[0].value
+        self.stockpile['stockpile_description'] = self.children[1].value
+        self.stockpile['stockpile_location'] = self.children[2].value
+        self.stockpile['stockpile_passcode'] = self.children[3].value
+
+        success = db_manager.update_stockpile(self.stockpile)
+        if success:
+            await interaction.response.send_message(f"Stockpile '{self.stockpile['stockpile_name']}' has been fully updated.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Failed to update stockpile. Please try again.", ephemeral=True)
+
+class EditItemModalPrimary(discord.ui.Modal, title='Edit Item'):
+    def __init__(self, item):
+        super().__init__()
+        self.item = item
+        self.add_item(discord.ui.TextInput(label='Item Name', default=item['item_name']))
+        self.add_item(discord.ui.TextInput(label='Aliases', default=item['item_aliases']))
+        self.add_item(discord.ui.TextInput(label='Can be crated?', default=str(item['can_be_crated'])))
+        self.add_item(discord.ui.TextInput(label='Can be palletized?', default=str(item['can_be_palleted'])))
+        self.add_item(discord.ui.TextInput(label='Image URL', default=item['image_url']))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.item['item_name'] = self.children[0].value
+        self.item['item_aliases'] = self.children[1].value
+        self.item['can_be_crated'] = self.children[2].value
+        self.item['can_be_palleted'] = self.children[3].value
+        self.item['image_url'] = self.children[4].value
+
+        success = db_manager.update_item(self.item)
+        if success:
+            view = EditItemSecondaryView(self.item)
+            await interaction.response.send_message(
+                "Primary fields updated successfully. Click the button below to edit secondary fields.",
+                view=view,
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message("Failed to update the item. Please try again.", ephemeral=True)
+
+class EditItemSecondaryView(discord.ui.View):
+    def __init__(self, item):
+        super().__init__()
+        self.item = item
+
+    @discord.ui.button(label="Edit Secondary Fields", style=discord.ButtonStyle.primary)
+    async def edit_secondary(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(EditItemModalSecondary(self.item))
+
+class EditItemModalSecondary(discord.ui.Modal, title='Edit Secondary Fields'):
+    def __init__(self, item):
+        super().__init__()
+        self.item = item
+        self.add_item(discord.ui.TextInput(label='Crate Size', default=str(item['crate_size'])))
+        self.add_item(discord.ui.TextInput(label='Pallet Size', default=str(item['pallet_size'])))
+        self.add_item(discord.ui.TextInput(label='Facilities', default=str(item['facilities'])))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.item['crate_size'] = self.children[0].value
+        self.item['pallet_size'] = self.children[1].value
+        self.item['facilities'] = self.children[2].value
+
+        success = db_manager.update_item(self.item)
+        if success:
+            await interaction.response.send_message(f"Item '{self.item['item_name']}' has been fully updated.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Failed to update secondary fields. Please try again.", ephemeral=True)
+
+class PaginatedView(discord.ui.View):
+    def __init__(self, entries, entries_per_page=10):
+        super().__init__(timeout=180)  # 3 minutes timeout
+        self.entries = entries
+        self.entries_per_page = entries_per_page
+        self.current_page = 1
+        self.total_pages = -(-len(entries) // entries_per_page)  # Ceiling division
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.grey)
+    async def previous_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page > 1:
+            self.current_page -= 1
+            await self.update_message(interaction)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.grey)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page < self.total_pages:
+            self.current_page += 1
+            await self.update_message(interaction)
+
+    async def update_message(self, interaction: discord.Interaction):
+        embed = self.create_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    def create_embed(self):
+        start_idx = (self.current_page - 1) * self.entries_per_page
+        end_idx = start_idx + self.entries_per_page
+        current_entries = self.entries[start_idx:end_idx]
+
+        embed = discord.Embed(title="Database Entries", color=discord.Color.blue())
+        for entry in current_entries:
+            aliases = entry['aliases']
+            if isinstance(aliases, str):
+                aliases = [aliases]  # If it's a string, make it a list with one item
+            aliases_str = ', '.join(aliases) if aliases else 'None'
+            embed.add_field(name=entry['name'], value=f"Aliases: {aliases_str}", inline=False)
+
+        embed.set_footer(text=f"Page {self.current_page}/{self.total_pages}")
+        return embed
 
 #--Startup
 @bot.event
@@ -443,9 +580,10 @@ async def on_message(message):
 @bot.event
 async def on_member_join(member):
     # Replace these IDs with your actual channel IDs
-    how_to_verify_channel_id = 1293716349578645574
-    verification_channel_id = 1293716381358882897
-    welcome_channel_id = 1293717909520252938
+    # TO DO: Move those values to .json config file
+    how_to_verify_channel_id = config['how_to_verify_channel_id']
+    verification_channel_id = config['verification_channel_id']
+    welcome_channel_id = config['welcome_channel_id']
 
     # Get the welcome channel using its ID
     channel = bot.get_channel(welcome_channel_id)
@@ -453,8 +591,8 @@ async def on_member_join(member):
     if channel:  # Ensure the channel exists
         # Format the welcome message with correct channel mentions using their IDs
         await channel.send(
-            f"Welcome {member.mention}! Please follow the instructions in <#{how_to_verify_channel_id}> "
-            f"and submit your images in <#{verification_channel_id}>."
+            f"<:RCL:{1301341129559638087}> Welcome {member.mention}! Please follow the instructions in <#{how_to_verify_channel_id}> "
+            f"and submit your images in <#{verification_channel_id}>. <:RCL:{1301341129559638087}>"
         )
 #-- Slash Commands --
 #Parameters for help slash command can be added in def help()
@@ -756,61 +894,16 @@ async def purge_all_stockpiles(interaction: discord.Interaction):
 	else :
 		await interaction.followup.send("No action has been taken. All tasks are running.")
 
-class EditItemModalPrimary(discord.ui.Modal, title='Edit Item'):
-    def __init__(self, item):
-        super().__init__()
-        self.item = item
-        self.add_item(discord.ui.TextInput(label='Item Name', default=item['item_name']))
-        self.add_item(discord.ui.TextInput(label='Aliases', default=item['item_aliases']))
-        self.add_item(discord.ui.TextInput(label='Can be crated?', default=str(item['can_be_crated'])))
-        self.add_item(discord.ui.TextInput(label='Can be palletized?', default=str(item['can_be_palleted'])))
-        self.add_item(discord.ui.TextInput(label='Image URL', default=item['image_url']))
-
-    async def on_submit(self, interaction: discord.Interaction):
-        self.item['item_name'] = self.children[0].value
-        self.item['item_aliases'] = self.children[1].value
-        self.item['can_be_crated'] = self.children[2].value
-        self.item['can_be_palleted'] = self.children[3].value
-        self.item['image_url'] = self.children[4].value
-
-        success = db_manager.update_item(self.item)
-        if success:
-            view = EditItemSecondaryView(self.item)
-            await interaction.response.send_message(
-                "Primary fields updated successfully. Click the button below to edit secondary fields.",
-                view=view,
-                ephemeral=True
-            )
-        else:
-            await interaction.response.send_message("Failed to update the item. Please try again.", ephemeral=True)
-
-class EditItemSecondaryView(discord.ui.View):
-    def __init__(self, item):
-        super().__init__()
-        self.item = item
-
-    @discord.ui.button(label="Edit Secondary Fields", style=discord.ButtonStyle.primary)
-    async def edit_secondary(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(EditItemModalSecondary(self.item))
-
-class EditItemModalSecondary(discord.ui.Modal, title='Edit Secondary Fields'):
-    def __init__(self, item):
-        super().__init__()
-        self.item = item
-        self.add_item(discord.ui.TextInput(label='Crate Size', default=str(item['crate_size'])))
-        self.add_item(discord.ui.TextInput(label='Pallet Size', default=str(item['pallet_size'])))
-        self.add_item(discord.ui.TextInput(label='Facilities', default=str(item['facilities'])))
-
-    async def on_submit(self, interaction: discord.Interaction):
-        self.item['crate_size'] = self.children[0].value
-        self.item['pallet_size'] = self.children[1].value
-        self.item['facilities'] = self.children[2].value
-
-        success = db_manager.update_item(self.item)
-        if success:
-            await interaction.response.send_message(f"Item '{self.item['item_name']}' has been fully updated.", ephemeral=True)
-        else:
-            await interaction.response.send_message("Failed to update secondary fields. Please try again.", ephemeral=True)
+@bot.tree.command()
+@has_critical_command_use_role()
+async def edit_stockpile(interaction: discord.Interaction, stockpile_name: str):
+    """Edit an existing stockpile in the database"""
+    stockpile = db_manager.get_stockpile_from_db(stockpile_name)
+    if not stockpile:
+        await interaction.response.send_message(f"Stockpile '{stockpile_name}' not found in the database.", ephemeral=True)
+        return
+    
+    await interaction.response.send_modal(EditStockpileModal(stockpile))
 
 @bot.tree.command()
 @has_critical_command_use_role()
@@ -854,6 +947,37 @@ async def delete_item(interaction: discord.Interaction, item_name: str):
     except asyncio.TimeoutError:
         await interaction.followup.send("Timeout: Item deletion canceled.", ephemeral=True)
 
+@bot.tree.command()
+@has_critical_command_use_role()
+async def delete_stockpile(interaction: discord.Interaction, stockpile_name: str):
+    """Delete stockpile from the database."""
+    
+    # Check if the item exists using the database manager
+    stockpile_exists = db_manager.get_stockpile_by_name(stockpile_name)
+
+    if stockpile_exists is None:
+        await interaction.response.send_message(f"No stockpile found with the name: {stockpile_exists}.", ephemeral=True)
+        return
+
+    # Confirmation message
+    await interaction.response.send_message(f"Are you sure you want to delete the stockpile '{stockpile_name}'? Type 'yes' to confirm.", ephemeral=True)
+
+    # Wait for the user's confirmation
+    def check(m):
+        return m.author == interaction.user and m.content.lower() == "yes"
+
+    try:
+        # Wait for user confirmation
+        msg = await bot.wait_for('message', check=check, timeout=30.0)
+
+        # Delete the item using the database manager
+        db_manager.delete_stockpile_by_name(stockpile_name)
+        
+        await interaction.followup.send(f"Item '{stockpile_name}' has been successfully deleted.", ephemeral=True)
+
+    except asyncio.TimeoutError:
+        await interaction.followup.send("Timeout: Item deletion canceled.", ephemeral=True)
+
 @bot.event
 async def on_error(event, *args, **kwargs):
     logger.error(f"An error occurred in event {event}")
@@ -861,4 +985,31 @@ async def on_error(event, *args, **kwargs):
     logger.error(f"Kwargs: {kwargs}")
     logger.error(traceback.format_exc())
 
+@bot.tree.command()
+@app_commands.checks.has_any_role(*config['command_use_roles'])
+async def show_all_facilities(interaction: discord.Interaction):
+    """Show all facilities in the database"""
+    facilities = db_manager.get_all_facilities()
+    if not facilities:
+        await interaction.response.send_message("No facilities found in the database.", ephemeral=True)
+        return
+
+    view = PaginatedView(facilities)
+    embed = view.create_embed()
+    await interaction.response.send_message(embed=embed, view=view)
+
+@bot.tree.command()
+@app_commands.checks.has_any_role(*config['command_use_roles'])
+async def show_all_items(interaction: discord.Interaction):
+    """Show all items in the database"""
+    items = db_manager.get_all_items()
+    if not items:
+        await interaction.response.send_message("No items found in the database.", ephemeral=True)
+        return
+
+    view = PaginatedView(items)
+    embed = view.create_embed()
+    await interaction.response.send_message(embed=embed, view=view)
+
 bot.run(bot_token)
+        

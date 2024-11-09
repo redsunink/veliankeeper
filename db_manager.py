@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 # Function to connect to the database
 def connect_db():
 	try:	
-		conn = sqlitecloud.connect("sqlitecloud://cy9qgtjmhz.sqlite.cloud:8860/main_data.db?apikey=ewyiwIMPWXpLxNvfLdK0IUhUpBwGUuRkB9CTMBeqq5g")
+		conn = sqlitecloud.connect("veliankeeper.db")
 		return conn
 	except Exception as e:
 		logger.error(f"Error connecting to the database: {e}")
@@ -629,6 +629,25 @@ def update_item(item):
         return False
     finally:
         conn.close()
+        
+def update_stockpile(stockpile):
+    conn = connect_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE stockpiles
+            SET stockpile_name = ?, stockpile_description = ?, stockpile_location = ?, stockpile_passcode = ?
+            WHERE id = ?
+        """, (stockpile['stockpile_name'], stockpile['stockpile_description'], stockpile['stockpile_location'], stockpile['stockpile_passcode'],
+              stockpile['id']))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error updating stockpile: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
 
 def get_item_by_name(item_name):
     """Check if the item exists in the database."""
@@ -636,6 +655,18 @@ def get_item_by_name(item_name):
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM items WHERE item_name = ?", (item_name,))
+    item = cursor.fetchone()
+
+    conn.close()
+
+    return item
+
+def get_stockpile_by_name(stockpile_name):
+    """Check if stockpile exists in the database."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM stockpiles WHERE stockpile_name = ?", (stockpile_name,))
     item = cursor.fetchone()
 
     conn.close()
@@ -651,3 +682,45 @@ def delete_item_by_name(item_name):
     conn.commit()
 
     conn.close()
+
+def delete_stockpile_by_name(stockpile_name):
+    """Delete stockpile from the database by its name."""
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM stockpiles WHERE stockpile_name = ?", (stockpile_name,))
+    conn.commit()
+
+    conn.close()
+
+def parse_aliases(aliases_str):
+    if not aliases_str:
+        return []
+    try:
+        aliases = json.loads(aliases_str)
+        if isinstance(aliases, list):
+            return aliases
+        elif isinstance(aliases, str):
+            return [aliases]
+        else:
+            return []
+    except json.JSONDecodeError:
+        return [aliases_str]  # Treat the whole string as a single alias if it's not valid JSON
+
+def get_all_items():
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT item_name, item_aliases FROM items")
+    items = cursor.fetchall()
+    conn.close()
+
+    return [{'name': item[0], 'aliases': parse_aliases(item[1])} for item in items]
+
+def get_all_facilities():
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT facility_name, facility_aliases FROM facilities")
+    facilities = cursor.fetchall()
+    conn.close()
+
+    return [{'name': facility[0], 'aliases': parse_aliases(facility[1])} for facility in facilities]
